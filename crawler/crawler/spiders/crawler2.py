@@ -98,4 +98,5 @@ class Crawler(Spider):
 		new = datetime(t['year'], t['month'], t['day'], t['hour'],
 					   t['minute'], t['second'], t['microsecond'])
 		d = new - old
+		print d.days
 		return d.days > 30
