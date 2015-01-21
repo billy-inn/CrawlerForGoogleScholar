@@ -11,8 +11,8 @@ class Crawler(Spider):
 	allowed_domains = ['scholar.google.com']
 
 	def __init__(self):
-		self.db = pymongo.Connection('166.111.7.105',30017)['bigsci']
-		self.db.authenticate('kegger_bigsci',"datiantian123!@#")
+		self.db = pymongo.Connection('ip',123)['name']
+		self.db.authenticate('username',"password")
 		profile_db = open("conf").readlines()[1].strip()
 		self.profile = self.db[profile_db]
 		self.cursor = self.profile.find()

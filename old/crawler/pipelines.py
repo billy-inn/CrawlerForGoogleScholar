@@ -8,7 +8,7 @@ import pymongo
 
 class CrawlerPipeline(object):
 	def __init__(self):
-		self.db = pymongo.Connection('166.111.7.105',30017)['bigsci']
+		self.db = pymongo.Connection('ip',123)['name']
 		self.db.authenticate('user_name',"password")
 		self.profile = self.db['crawledData_copy']
 		
