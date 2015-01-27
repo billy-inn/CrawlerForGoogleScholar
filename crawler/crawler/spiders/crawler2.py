@@ -5,6 +5,7 @@ from scrapy.http import Request
 from datetime import datetime, timedelta
 import string
 import pymongo
+from bson import ObjectId
 
 class Crawler(Spider):
 	name = "2"
@@ -15,14 +16,24 @@ class Crawler(Spider):
 		self.db.authenticate('username',"password")
 		profile_db = open("conf").readlines()[1].strip()
 		self.profile = self.db[profile_db]
-		self.cursor = self.profile.find()
-		self.entry = self.cursor.next()
+		self.idList = []
+		self.ptr = 0
+		cnt = 0
+		fr = open("id.txt")
+		for item in fr.readlines():
+			self.idList.append(ObjectId(item.strip()))
+		self.limit = len(self.idList)
+		self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
 		t = datetime.now()
 		tmp = {'year':t.year, 'month':t.month, 'day':t.day, 'hour':t.hour, 
 			   'minute':t.minute, 'second':t.second, 'microsecond':t.microsecond}
-		while ((self.entry is not None) and (self.entry.has_key('token'))) and (not self.isVaild(self.entry['token'], tmp)):
+		while self.isVaild(tmp):
 			print "Skip %s" % str(self.entry["_id"])
-			self.entry = self.cursor.next()
+			self.ptr += 1
+			if self.ptr >= self.limit:
+				self.entry = None
+				break
+			self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
 		if self.entry is not None:
 			self.entry['token'] = tmp
 			self.entry['pubs'] = []
@@ -79,10 +90,18 @@ class Crawler(Spider):
 				d += 1
 			yield Request(url[:idx-d] + str(offset+100) + '&pagesize=100', self.parse)
 		else:
-			self.entry = self.cursor.next() 
-			while ((self.entry is not None) and (self.entry.has_key('token'))) and (not self.isVaild(self.entry['token'], item['token'])):
+			self.ptr += 1
+			if self.ptr >= self.limit:
+				self.entry = None
+			else:
+				self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
+			while self.isVaild(item['token']):
 				print "Skip %s" % str(self.entry["_id"])
-				self.entry = self.cursor.next()
+				self.ptr += 1
+				if self.ptr >= self.limit:
+					self.entry = None
+					break
+				self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
 			if self.entry is not None:
 				self.entry['token'] = item['token']
 				self.entry['pubs'] = []
@@ -90,13 +109,19 @@ class Crawler(Spider):
 				yield Request(self.entry['url'] + '&cstart=0&pagesize=100', callback = self.parse)
 				print "Start Processing %s" % str(self.entry["_id"])
 	
-	def isVaild(self, old, new):
-		t = old
+	def isVaild(self, new):
+		if self.entry is None:
+			print "Invaild item"
+			return False
+		if not self.entry.has_key("token"):
+			print "No token"
+			return False
+		t = self.entry["token"]
 		old = datetime(t['year'], t['month'], t['day'], t['hour'],
 					   t['minute'], t['second'], t['microsecond'])
 		t = new
 		new = datetime(t['year'], t['month'], t['day'], t['hour'],
 					   t['minute'], t['second'], t['microsecond'])
 		d = new - old
-		print d.days
-		return d.days > 30
+		print "Have passed %d days after last update" % d.days
+		return d.days <= 30
