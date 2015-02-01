@@ -14,11 +14,11 @@ class Crawler(Spider):
 	def __init__(self):
 		self.db = pymongo.Connection('ip',123)['name']
 		self.db.authenticate('username',"password")
-		profile_db = open("conf").readlines()[1].strip()
+		conf = open("conf").readlines()
+		profile_db = conf[1].strip()
 		self.profile = self.db[profile_db]
 		self.idList = []
-		self.ptr = 0
-		cnt = 0
+		self.ptr = int(conf[0].strip())
 		fr = open("id.txt")
 		for item in fr.readlines():
 			self.idList.append(ObjectId(item.strip()))

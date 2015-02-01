@@ -12,17 +12,18 @@ if [ $1 = 1 ]; then
 		echo "The target database is $3."
 		scrapy crawl 1
 	else
-		echo "usage: run 1 start_url target_database\n"
+		echo "usage: run 1 start_url target_database"
 	fi
 elif [ $1 = 2 ]; then
-	if [ $# = 2 ]; then
-		echo $2 > ${conf}
+	if [ $# = 3 ]; then
+		echo $3 > ${conf}
 		echo $2 >> ${conf}
 		echo "mode 2 is chosen."
 		echo "The profile database is $2."
+		echo "The start index is $3."
 		scrapy crawl 2
 	else
-		echo "usage: run 2 profile_database\n"
+		echo "usage: run 2 profile_database start_index"
 	fi
 elif [ $1 = 3 ]; then
 	echo "mode 3"
