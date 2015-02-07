@@ -9,7 +9,7 @@ class Crawler(Spider):
 	allowed_domains = ['scholar.google.com']
 
 	def __init__(self):
-		start_url = open("conf").readlines()[0].strip()
+		start_url = open("conf").readlines()[1].strip()
 		self.start_urls = [start_url,]
 		self.urlSet = set()
 

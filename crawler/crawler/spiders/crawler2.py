@@ -17,17 +17,18 @@ class Crawler(Spider):
 		self.db = pymongo.Connection('ip',123)['name']
 		self.db.authenticate('username',"password")
 		conf = open("conf").readlines()
-		profile_db = conf[1].strip()
+		profile_db = conf[0].strip()
 		self.profile = self.db[profile_db]
 		self.start_urls = []
 		self._id = {}
 		#self.idList = []
-		self.ptr = int(conf[0].strip())
+		self.ptr = int(conf[1].strip())
+		self.end = int(conf[2].strip())
 		t = datetime.now()
 		tmp = {'year':t.year, 'month':t.month, 'day':t.day, 'hour':t.hour, 
 			   'minute':t.minute, 'second':t.second, 'microsecond':t.microsecond}
 		fr = open("id.txt").readlines()
-		for i in range(self.ptr, len(fr)):
+		for i in range(self.ptr, self.end):
 			_id = ObjectId(fr[i].strip())
 			self.entry = self.profile.find_one({"_id":_id})
 			if not self.isVaild(tmp):
@@ -36,7 +37,7 @@ class Crawler(Spider):
 		self.proxies = []
 		self.request20proxy = 'http://erwx.daili666.com/ip/?tid=559592762367605&num=20&filter=on&foreign=only'
 		self.request1proxy = 'http://erwx.daili666.com/ip/?tid=559592762367605&num=1&filter=on&foreign=only'
-		proxy = urllib.urlopen(self.request100proxy)
+		proxy = urllib.urlopen(self.request20proxy)
 		for line in proxy.readlines():
 			self.proxies.append('http://' + line.strip())
 		#self.limit = len(self.idList)

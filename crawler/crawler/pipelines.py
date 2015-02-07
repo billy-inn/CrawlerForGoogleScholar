@@ -11,7 +11,7 @@ class CrawlerPipeline(object):
 	def __init__(self):
 		self.db = pymongo.Connection('ip',123)['name']
 		self.db.authenticate('user_name',"password")
-		database = open("conf").readlines()[1].strip()
+		database = open("conf").readlines()[0].strip()
 		self.profile = self.db[database]
 		
 	def process_item(self, item, spider):
