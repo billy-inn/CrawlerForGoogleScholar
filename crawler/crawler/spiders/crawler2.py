@@ -34,7 +34,7 @@ class Crawler(Spider):
 				self._id[self.entry["ID"]] = self.entry["_id"]
 				self.start_urls.append(self.entry['url'] + '&cstart=0&pagesize=100')
 		self.proxies = []
-		self.request100proxy = 'http://erwx.daili666.com/ip/?tid=559592762367605&num=100&filter=on&foreign=only'
+		self.request20proxy = 'http://erwx.daili666.com/ip/?tid=559592762367605&num=20&filter=on&foreign=only'
 		self.request1proxy = 'http://erwx.daili666.com/ip/?tid=559592762367605&num=1&filter=on&foreign=only'
 		proxy = urllib.urlopen(self.request100proxy)
 		for line in proxy.readlines():
@@ -55,7 +55,7 @@ class Crawler(Spider):
 		#	print "Start Processing %s" % str(self.entry["_id"])
 	
 	def choose_proxy(self):
-		idx = random.randint(0, 99)
+		idx = random.randint(0, 19)
 		if not self.test_proxy(self.proxies[idx]):
 			proxy = urllib.urlopen(self.request1proxy)
 			self.proxies[idx] = 'http://' + proxy.readlines()[0].strip()
@@ -75,7 +75,7 @@ class Crawler(Spider):
 				return True
 	
 	def make_requests_from_url(self,url):
-		return Request(url, callback=self.parse, meta={'proxy'=self.choose_proxy()})
+		return Request(url, callback=self.parse, meta={'proxy':self.choose_proxy(), 'dont_retry':True})
 
 	def parse(self,response):
 		sel = Selector(response)
@@ -123,7 +123,7 @@ class Crawler(Spider):
 				offset = offset*10 + int(url[idx])
 				idx += 1
 				d += 1
-			yield Request(url[:idx-d] + str(offset+100) + '&pagesize=100', callback = self.parse, meta={'proxy'=self.choose_proxy()})
+			yield Request(url[:idx-d] + str(offset+100) + '&pagesize=100', callback = self.parse, meta={'proxy':self.choose_proxy(),'dont_retry':True})
 		#else:
 		#	item["entry"] = self.entry
 		#	yield item
