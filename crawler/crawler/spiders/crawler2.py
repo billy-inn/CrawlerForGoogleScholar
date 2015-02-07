@@ -3,9 +3,11 @@ from scrapy.selector import Selector
 from crawler.items import CrawlerItem
 from scrapy.http import Request
 from datetime import datetime, timedelta
-import string
+import string, random
 import pymongo
 from bson import ObjectId
+import urllib, socket
+import time
 
 class Crawler(Spider):
 	name = "2"
@@ -17,31 +19,63 @@ class Crawler(Spider):
 		conf = open("conf").readlines()
 		profile_db = conf[1].strip()
 		self.profile = self.db[profile_db]
-		self.idList = []
+		self.start_urls = []
+		self._id = {}
+		#self.idList = []
 		self.ptr = int(conf[0].strip())
-		fr = open("id.txt")
-		for item in fr.readlines():
-			self.idList.append(ObjectId(item.strip()))
-		self.limit = len(self.idList)
-		self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
 		t = datetime.now()
 		tmp = {'year':t.year, 'month':t.month, 'day':t.day, 'hour':t.hour, 
 			   'minute':t.minute, 'second':t.second, 'microsecond':t.microsecond}
-		while self.isVaild(tmp):
-			print "Skip %s" % str(self.entry["_id"])
-			self.ptr += 1
-			if self.ptr >= self.limit:
-				self.entry = None
-				break
-			self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
-		if self.entry is not None:
-			self.entry['token'] = tmp
-			self.entry['pubs'] = []
-			self.start_urls = [self.entry['url'] + '&cstart=0&pagesize=100',]
-			print "Start Processing %s" % str(self.entry["_id"])
+		fr = open("id.txt").readlines()
+		for i in range(self.ptr, len(fr)):
+			_id = ObjectId(fr[i].strip())
+			self.entry = self.profile.find_one({"_id":_id})
+			if not self.isVaild(tmp):
+				self._id[self.entry["ID"]] = self.entry["_id"]
+				self.start_urls.append(self.entry['url'] + '&cstart=0&pagesize=100')
+		self.proxies = []
+		self.request100proxy = 'http://erwx.daili666.com/ip/?tid=559592762367605&num=100&filter=on&foreign=only'
+		self.request1proxy = 'http://erwx.daili666.com/ip/?tid=559592762367605&num=1&filter=on&foreign=only'
+		proxy = urllib.urlopen(self.request100proxy)
+		for line in proxy.readlines():
+			self.proxies.append('http://' + line.strip())
+		#self.limit = len(self.idList)
+		#self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
+		#while self.isVaild(tmp):
+		#	print "Skip %s" % str(self.entry["_id"])
+		#	self.ptr += 1
+		#	if self.ptr >= self.limit:
+		#		self.entry = None
+		#		break
+		#	self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
+		#if self.entry is not None:
+		#	self.entry['token'] = tmp
+		#	self.entry['pubs'] = []
+		#	self.start_urls = [self.entry['url'] + '&cstart=0&pagesize=100',]
+		#	print "Start Processing %s" % str(self.entry["_id"])
+	
+	def choose_proxy(self):
+		idx = random.randint(0, 99)
+		if not self.test_proxy(self.proxies[idx]):
+			proxy = urllib.urlopen(self.request1proxy)
+			self.proxies[idx] = 'http://' + proxy.readlines()[0].strip()
+		return self.proxies[idx]
+	
+	def test_proxy(self, proxy):
+		socket.setdefaulttimeout(3.0)
+		test_url = 'http://scholar.google.com'
+		try:
+			f = urllib.urlopen(test_url, proxies={'http':proxy})
+		except:
+			return False
+		else:
+			if f.getcode() != '200':
+				return False
+			else:
+				return True
 	
 	def make_requests_from_url(self,url):
-		return Request(url, callback=self.parse, meta={'proxy'='http://localhost:3128'})
+		return Request(url, callback=self.parse, meta={'proxy'=self.choose_proxy()})
 
 	def parse(self,response):
 		sel = Selector(response)
@@ -52,7 +86,7 @@ class Crawler(Spider):
 
 		item = CrawlerItem()
 	
-		#item['_id'] = self.entry['_id']
+		item['_id'] = self._id[_id]
 		#item['ID'] = _id
 		#item['url'] = response.url
 		#item['name'] = sel.xpath('//div[@id="gsc_prf_in"]/text()').extract()[0]
@@ -79,7 +113,7 @@ class Crawler(Spider):
 				sel.xpath('//tbody[@id="gsc_a_b"]/tr[@class="gsc_a_tr"][%d]/td[@class="gsc_a_y"]/span/text()' % i).extract()
 			item['pubs'].append(pub)
 
-		self.entry['pubs'].extend(item['pubs'])
+		yield item
 			
 		if n == 100:
 			offset = 0; d = 0
@@ -89,27 +123,27 @@ class Crawler(Spider):
 				offset = offset*10 + int(url[idx])
 				idx += 1
 				d += 1
-			yield Request(url[:idx-d] + str(offset+100) + '&pagesize=100', callback = self.parse, meta={'proxy'='http://localhost:3128'})
-		else:
-			item["entry"] = self.entry
-			yield item
-			self.ptr += 1
-			if self.ptr >= self.limit:
-				self.entry = None
-			else:
-				self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
-			while self.isVaild(item['token']):
-				print "Skip %s" % str(self.entry["_id"])
-				self.ptr += 1
-				if self.ptr >= self.limit:
-					self.entry = None
-					break
-				self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
-			if self.entry is not None:
-				self.entry['token'] = item['token']
-				self.entry['pubs'] = []
-				yield Request(self.entry['url'] + '&cstart=0&pagesize=100', callback = self.parse, meta={'proxy'='http://localhost:3128'})
-				print "Start Processing %s" % str(self.entry["_id"])
+			yield Request(url[:idx-d] + str(offset+100) + '&pagesize=100', callback = self.parse, meta={'proxy'=self.choose_proxy()})
+		#else:
+		#	item["entry"] = self.entry
+		#	yield item
+		#	self.ptr += 1
+		#	if self.ptr >= self.limit:
+		#		self.entry = None
+		#	else:
+		#		self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
+		#	while self.isVaild(item['token']):
+		#		print "Skip %s" % str(self.entry["_id"])
+		#		self.ptr += 1
+		#		if self.ptr >= self.limit:
+		#			self.entry = None
+		#			break
+		#		self.entry = self.profile.find_one({"_id":self.idList[self.ptr]})
+		#	if self.entry is not None:
+		#		self.entry['token'] = item['token']
+		#		self.entry['pubs'] = []
+		#		yield Request(self.entry['url'] + '&cstart=0&pagesize=100', callback = self.parse, meta={'proxy'='http://localhost:3128'})
+		#		print "Start Processing %s" % str(self.entry["_id"])
 	
 	def isVaild(self, new):
 		if self.entry is None:

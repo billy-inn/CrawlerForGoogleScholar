@@ -20,7 +20,11 @@ class CrawlerPipeline(object):
 					'pubs':item['pubs']}
 			self.profile.insert(post)
 		elif spider.name == "2":
-			self.profile.save(item['entry'])
+			entry = self.profile.find_one({"_id":item["_id"]})
+			if entry is not None:
+				entry["pubs"].extend(item["pubs"])
+				entry["token"] = item["token"]
+				self.profile.save(entry)
 		elif spider.name == "3":
 			pass
 
