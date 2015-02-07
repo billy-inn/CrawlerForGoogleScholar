@@ -37,9 +37,11 @@ class Crawler(Spider):
 		if self.entry is not None:
 			self.entry['token'] = tmp
 			self.entry['pubs'] = []
-			self.profile.save(self.entry)
 			self.start_urls = [self.entry['url'] + '&cstart=0&pagesize=100',]
 			print "Start Processing %s" % str(self.entry["_id"])
+	
+	def make_requests_from_url(self,url):
+		return Request(url, callback=self.parse, meta={'proxy'='http://localhost:3128'})
 
 	def parse(self,response):
 		sel = Selector(response)
@@ -50,7 +52,7 @@ class Crawler(Spider):
 
 		item = CrawlerItem()
 	
-		item['_id'] = self.entry['_id']
+		#item['_id'] = self.entry['_id']
 		#item['ID'] = _id
 		#item['url'] = response.url
 		#item['name'] = sel.xpath('//div[@id="gsc_prf_in"]/text()').extract()[0]
@@ -78,7 +80,6 @@ class Crawler(Spider):
 			item['pubs'].append(pub)
 
 		self.entry['pubs'].extend(item['pubs'])
-		self.profile.save(self.entry)
 			
 		if n == 100:
 			offset = 0; d = 0
@@ -88,8 +89,10 @@ class Crawler(Spider):
 				offset = offset*10 + int(url[idx])
 				idx += 1
 				d += 1
-			yield Request(url[:idx-d] + str(offset+100) + '&pagesize=100', self.parse)
+			yield Request(url[:idx-d] + str(offset+100) + '&pagesize=100', callback = self.parse, meta={'proxy'='http://localhost:3128'})
 		else:
+			item["entry"] = self.entry
+			yield item
 			self.ptr += 1
 			if self.ptr >= self.limit:
 				self.entry = None
@@ -105,8 +108,7 @@ class Crawler(Spider):
 			if self.entry is not None:
 				self.entry['token'] = item['token']
 				self.entry['pubs'] = []
-				self.profile.save(self.entry)
-				yield Request(self.entry['url'] + '&cstart=0&pagesize=100', callback = self.parse)
+				yield Request(self.entry['url'] + '&cstart=0&pagesize=100', callback = self.parse, meta={'proxy'='http://localhost:3128'})
 				print "Start Processing %s" % str(self.entry["_id"])
 	
 	def isVaild(self, new):

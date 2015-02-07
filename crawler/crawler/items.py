@@ -15,4 +15,5 @@ class CrawlerItem(Item):
 	info = Field()
 	pubs = Field()
 	token = Field()
+	entry = Field()
 

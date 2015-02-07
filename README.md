@@ -16,9 +16,10 @@ and target_database is the collection in the MongoDB.
 
 #### Mode 2: Crawl the publications of the corresponding profiles
 
-`./run.sh 2 profile_database`
+`./run.sh 2 profile_database start_index`
 
-profile_database is the database crawled in the first step
+profile_database is the database crawled in the first step;
+start_index is the start profile's index.
 
 #### Mode 3: Crawl the publications via the titles directly
 
